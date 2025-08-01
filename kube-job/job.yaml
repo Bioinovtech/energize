@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: energize-job
+  labels:
+    app: energize
+spec:
+  template:
+    metadata:
+      labels:
+        app: energize
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: energize
+        image: docker.temp/energize:latest
+        imagePullPolicy: Never
+        resources:
+          limits:
+            nvidia.com/gpu: "1"
+          requests:
+            nvidia.com/gpu: "1"
+        volumeMounts:
+        - name: config-volume
+          mountPath: /home/example
+          readOnly: true
+        - name: experiments-volume
+          mountPath: /home/experiments
+        env:
+        - name: CUDA_VISIBLE_DEVICES
+          value: "0"
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: "all"
+        - name: NVIDIA_DRIVER_CAPABILITIES
+          value: "compute,utility"
+        command: ["/bin/bash"]
+        args: 
+        - "-c"
+        - "ls -la && ls -la example/ && /opt/conda/envs/energize/bin/python -u -m energize.main -d mnist -c example/example_config.json -g example/energize.grammar --run 0 --gpu-enabled"
+      volumes:
+      - name: config-volume
+        configMap:
+          name: energize-config
+      - name: experiments-volume
+        emptyDir: {}
